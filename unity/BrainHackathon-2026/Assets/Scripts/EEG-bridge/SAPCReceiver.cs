@@ -56,6 +56,7 @@ public class SAPCReceiver : MonoBehaviour
     private bool hasInvalidPacket = false;
     private string latestInvalidPacket = "";
     private float nextLogTime = 0f;
+    private float sessionLogTimer = 0f;
 
     void Start()
     {
@@ -324,6 +325,18 @@ public class SAPCReceiver : MonoBehaviour
         if (logInvalidPackets && shouldLogInvalid)
         {
             Debug.LogWarning($"SAPCReceiver: could not parse packet '{invalidText}'");
+        }
+
+        sessionLogTimer += Time.deltaTime;
+
+        if (sessionLogTimer >= 1f)
+        {
+            sessionLogTimer = 0f;
+
+            if (SessionLogger.Instance != null)
+            {
+                SessionLogger.Instance.LogValue(target);
+            }
         }
     }
 
