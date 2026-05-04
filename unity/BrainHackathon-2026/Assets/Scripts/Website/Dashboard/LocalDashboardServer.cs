@@ -14,6 +14,15 @@ public class LocalDashboardServer : MonoBehaviour
     private int sceneToLoad = -1;
     private int currentSceneIndex = -1;
 
+    private readonly object musicLock = new object();
+    private string pendingMusicAction = "";
+
+    private string cachedMusicStatus = "Not found";
+    private string cachedMusicVolume = "0";
+
+    private readonly object appLock = new object();
+    private bool quitRequested = false;
+
     private const string PASSWORD = "test";
 
     void Start()
@@ -56,6 +65,69 @@ public class LocalDashboardServer : MonoBehaviour
             Debug.Log("Website loading scene index: " + index);
             SceneManager.LoadScene(index);
         }
+
+        string musicAction = "";
+
+        lock (musicLock)
+        {
+            if (!string.IsNullOrEmpty(pendingMusicAction))
+            {
+                musicAction = pendingMusicAction;
+                pendingMusicAction = "";
+            }
+        }
+
+        if (!string.IsNullOrEmpty(musicAction))
+        {
+            if (AmbientAudioManager.Instance != null)
+            {
+                Debug.Log("Music action from website: " + musicAction);
+
+                if (musicAction == "on")
+                    AmbientAudioManager.Instance.SetMusicEnabled(true);
+
+                if (musicAction == "off")
+                    AmbientAudioManager.Instance.SetMusicEnabled(false);
+
+                if (musicAction == "up")
+                    AmbientAudioManager.Instance.IncreaseVolume();
+
+                if (musicAction == "down")
+                    AmbientAudioManager.Instance.DecreaseVolume();
+            }
+            else
+            {
+                Debug.LogWarning("AmbientAudioManager.Instance is null");
+            }
+        }
+
+        if (AmbientAudioManager.Instance != null)
+        {
+            cachedMusicStatus = AmbientAudioManager.Instance.IsMusicEnabled() ? "On" : "Off";
+            cachedMusicVolume = Mathf.RoundToInt(AmbientAudioManager.Instance.GetVolume() * 100f).ToString();
+        }
+        else
+        {
+            cachedMusicStatus = "Not found";
+            cachedMusicVolume = "0";
+        }
+
+        bool shouldQuit = false;
+
+        lock (appLock)
+        {
+            if (quitRequested)
+            {
+                shouldQuit = true;
+                quitRequested = false;
+            }
+        }
+
+        if (shouldQuit)
+        {
+            Debug.Log("Quit requested from website.");
+            Application.Quit();
+        }
     }
 
     void HandleRequests()
@@ -92,6 +164,19 @@ public class LocalDashboardServer : MonoBehaviour
                     continue;
                 }
 
+                if (path == "/music")
+                {
+                    string action = context.Request.QueryString["action"];
+
+                    lock (musicLock)
+                    {
+                        pendingMusicAction = action;
+                    }
+
+                    RedirectHome(context.Response);
+                    continue;
+                }
+
                 if (path == "/stop")
                 {
                     if (SessionLogger.Instance != null)
@@ -113,6 +198,17 @@ public class LocalDashboardServer : MonoBehaviour
                     context.Response.ContentLength64 = buffer.Length;
                     context.Response.OutputStream.Write(buffer, 0, buffer.Length);
                     context.Response.OutputStream.Close();
+                    continue;
+                }
+
+                if (path == "/quit")
+                {
+                    lock (appLock)
+                    {
+                        quitRequested = true;
+                    }
+
+                    SendHtml(context.Response, "<html><body><h1>Application closing...</h1></body></html>");
                     continue;
                 }
 
@@ -195,6 +291,19 @@ public class LocalDashboardServer : MonoBehaviour
         string log = SessionLogger.Instance != null ? SessionLogger.Instance.GetLogHtml() : "No logger found.";
         string graph = SessionLogger.Instance != null ? SessionLogger.Instance.GetGraphSvg() : "";
 
+        string musicStatus = cachedMusicStatus;
+        string musicVolume = cachedMusicVolume;
+
+        bool recordingStopped = SessionLogger.Instance != null && !SessionLogger.Instance.isCollecting;
+
+        string quitButtonHtml = recordingStopped
+            ? @"
+                <form action='/quit' method='get'>
+                    <input type='hidden' name='password' value='test'>
+                    <button class='action-button quit-button'>Quit App</button>
+                </form>"
+            : "";
+
         return $@"
         <html>
         <head>
@@ -272,6 +381,14 @@ public class LocalDashboardServer : MonoBehaviour
                     background: #c6d9e6;
                 }}
 
+                .music-info {{
+                    display: flex;
+                    gap: 18px;
+                    margin-bottom: 14px;
+                    color: #607789;
+                    font-size: 16px;
+                }}
+
                 .stats-grid {{
                     display: grid;
                     grid-template-columns: 1fr 1fr;
@@ -332,7 +449,13 @@ public class LocalDashboardServer : MonoBehaviour
 
                 .log-panel {{
                     height: 420px;
+                    overflow: hidden;
+                }}
+
+                .log-scroll {{
+                    height: 330px;
                     overflow-y: auto;
+                    position: relative;
                 }}
 
                 table {{
@@ -348,6 +471,7 @@ public class LocalDashboardServer : MonoBehaviour
                     color: white;
                     padding: 10px;
                     text-align: left;
+                    z-index: 10;
                 }}
 
                 td {{
@@ -364,6 +488,10 @@ public class LocalDashboardServer : MonoBehaviour
                     font-size: 15px;
                     margin-top: -8px;
                     margin-bottom: 14px;
+                }}
+
+                .quit-button {{
+                    background: #333333;
                 }}
             </style>
         </head>
@@ -383,8 +511,27 @@ public class LocalDashboardServer : MonoBehaviour
                         <form class='scene-form' action='/scene' method='get'>
                             <input type='hidden' name='password' value='test'>
                             <button class='scene-button' name='index' value='0'>Main Menu</button>
-                            <button class='scene-button' name='index' value='1'>Game Scene 1</button>
-                            <button class='scene-button' name='index' value='2'>Game Scene 2</button>
+                            <button class='scene-button' name='index' value='1'>Start Room</button>
+                            <button class='scene-button' name='index' value='2'>Cleaning Room</button>
+                            <button class='scene-button' name='index' value='3'>Balloon Room</button>
+                        </form>
+                    </div>
+
+                    <div class='panel'>
+                        <h2>Music Control</h2>
+                        <p class='small-note'>Ambient music control for the patient screen.</p>
+
+                        <div class='music-info'>
+                            <div><b>Status:</b> {musicStatus}</div>
+                            <div><b>Volume:</b> {musicVolume}%</div>
+                        </div>
+
+                        <form class='scene-form' action='/music' method='get'>
+                            <input type='hidden' name='password' value='test'>
+                            <button class='scene-button' name='action' value='on'>Music On</button>
+                            <button class='scene-button' name='action' value='off'>Music Off</button>
+                            <button class='scene-button' name='action' value='down'>Volume -</button>
+                            <button class='scene-button' name='action' value='up'>Volume +</button>
                         </form>
                     </div>
 
@@ -407,6 +554,8 @@ public class LocalDashboardServer : MonoBehaviour
                             <input type='hidden' name='password' value='test'>
                             <button class='action-button save-button'>Save CSV</button>
                         </form>
+
+                        {quitButtonHtml}
                     </div>
 
                     <div class='panel'>
@@ -419,7 +568,9 @@ public class LocalDashboardServer : MonoBehaviour
 
                     <div class='panel log-panel'>
                         <h2>Session Log</h2>
-                        {log}
+                        <div class='log-scroll'>
+                            {log}
+                        </div>
                     </div>
                 </div>
             </div>

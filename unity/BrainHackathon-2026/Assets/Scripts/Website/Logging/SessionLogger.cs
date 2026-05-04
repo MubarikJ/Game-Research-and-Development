@@ -150,25 +150,36 @@ public class SessionLogger : MonoBehaviour
                 float x = padding + ((float)i / (visibleCount - 1)) * (width - padding * 2);
                 float y = height - padding - (score / 100f) * (height - padding * 2);
 
-                points.Append($"{x:F1},{y:F1} ");
+                points.Append(
+                    x.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)
+                    + "," +
+                    y.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)
+                    + " "
+                );
             }
 
             return $@"
             <svg width='100%' height='{height}' viewBox='0 0 {width} {height}'>
                 <rect width='{width}' height='{height}' fill='#ffffff'/>
 
+                <defs>
+                    <clipPath id='chartClip'>
+                        <rect x='{padding}' y='{padding}' width='{width - padding * 2}' height='{height - padding * 2}' />
+                    </clipPath>
+                </defs>
+
                 <line x1='{padding}' y1='{height - padding}' x2='{width - padding}' y2='{height - padding}' stroke='#999' stroke-width='2'/>
                 <line x1='{padding}' y1='{padding}' x2='{padding}' y2='{height - padding}' stroke='#999' stroke-width='2'/>
 
-                <line x1='{padding}' y1='{height - padding - 0.25f * (height - padding * 2)}' x2='{width - padding}' y2='{height - padding - 0.25f * (height - padding * 2)}' stroke='#ddd' stroke-width='1'/>
-                <line x1='{padding}' y1='{height - padding - 0.50f * (height - padding * 2)}' x2='{width - padding}' y2='{height - padding - 0.50f * (height - padding * 2)}' stroke='#ddd' stroke-width='1'/>
-                <line x1='{padding}' y1='{height - padding - 0.75f * (height - padding * 2)}' x2='{width - padding}' y2='{height - padding - 0.75f * (height - padding * 2)}' stroke='#ddd' stroke-width='1'/>
+                <line x1='{padding}' y1='80' x2='{width - padding}' y2='80' stroke='#ddd' stroke-width='1'/>
+                <line x1='{padding}' y1='130' x2='{width - padding}' y2='130' stroke='#ddd' stroke-width='1'/>
+                <line x1='{padding}' y1='180' x2='{width - padding}' y2='180' stroke='#ddd' stroke-width='1'/>
 
                 <text x='5' y='{padding + 5}' fill='#555' font-size='14'>100%</text>
                 <text x='10' y='{height / 2}' fill='#555' font-size='14'>50%</text>
                 <text x='18' y='{height - padding + 5}' fill='#555' font-size='14'>0%</text>
 
-                <polyline points='{points}' fill='none' stroke='#1f77b4' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/>
+                <polyline points='{points}' fill='none' stroke='#1f77b4' stroke-width='4' stroke-linecap='round' stroke-linejoin='round' clip-path='url(#chartClip)'/>
             </svg>";
         }
     }
