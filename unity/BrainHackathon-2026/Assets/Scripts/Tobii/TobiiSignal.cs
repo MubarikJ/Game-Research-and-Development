@@ -11,6 +11,7 @@ public class TobiiSignal : MonoBehaviour
     public float trailDotSize = 18f;
     public int trailLength = 25;
     public float trailSpacing = 0.02f;
+    public bool HasTobiiSignal { get; private set; } = false;
 
     [Header("Smoothing")]
     public bool smoothMovement = true;
@@ -44,6 +45,8 @@ public class TobiiSignal : MonoBehaviour
 
         if (!gazePoint.IsValid)
         {
+            HasTobiiSignal = false;
+
             mainDot.enabled = false;
 
             foreach (Image dot in trailDots)
@@ -51,6 +54,8 @@ public class TobiiSignal : MonoBehaviour
 
             return;
         }
+
+HasTobiiSignal = true;
 
         mainDot.enabled = true;
 

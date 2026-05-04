@@ -75,26 +75,101 @@ public class SessionLogger : MonoBehaviour
             }
 
             if (count > 0)
-            {
                 average /= count;
-            }
             else
-            {
                 lowest = 0f;
-            }
 
             TimeSpan duration = DateTime.Now - sessionStartTime;
 
             return $@"
-                <div class='metric'><span>Control now</span><b>{current:F0}%</b></div>
-                <div class='metric'><span>Current signal</span><b>{latestValue:F2}</b></div>
-                <div class='metric'><span>Performance score</span><b>{current:F0}/100</b></div>
-                <div class='metric'><span>Consistency average</span><b>{average:F0}%</b></div>
-                <div class='metric'><span>Potential best</span><b>{best:F0}%</b></div>
-                <div class='metric'><span>Fatigue / lowest</span><b>{lowest:F0}%</b></div>
-                <div class='metric'><span>Samples recorded</span><b>{count}</b></div>
-                <div class='metric'><span>Session duration</span><b>{duration:mm\:ss}</b></div>
+                <div class='stat-card'>
+                    <span>Current Control</span>
+                    <strong>{current:F0}%</strong>
+                </div>
+                <div class='stat-card'>
+                    <span>Performance Score</span>
+                    <strong>{current:F0}/100</strong>
+                </div>
+                <div class='stat-card'>
+                    <span>Average Control</span>
+                    <strong>{average:F0}%</strong>
+                </div>
+                <div class='stat-card'>
+                    <span>Best Control</span>
+                    <strong>{best:F0}%</strong>
+                </div>
+                <div class='stat-card'>
+                    <span>Lowest Control</span>
+                    <strong>{lowest:F0}%</strong>
+                </div>
+                <div class='stat-card'>
+                    <span>Samples</span>
+                    <strong>{count}</strong>
+                </div>
+                <div class='stat-card'>
+                    <span>Session Time</span>
+                    <strong>{duration:mm\:ss}</strong>
+                </div>
+                <div class='stat-card'>
+                    <span>Status</span>
+                    <strong>{(isCollecting ? "Recording" : "Stopped")}</strong>
+                </div>
             ";
+        }
+    }
+
+    public string GetGraphSvg()
+    {
+        lock (dataLock)
+        {
+            int width = 900;
+            int height = 260;
+            int padding = 35;
+
+            if (samples.Count < 2)
+            {
+                return $@"
+                <svg width='100%' height='{height}' viewBox='0 0 {width} {height}'>
+                    <rect width='{width}' height='{height}' fill='#ffffff'/>
+                    <text x='{width / 2}' y='{height / 2}' text-anchor='middle' fill='#888' font-size='22'>
+                        Waiting for data...
+                    </text>
+                </svg>";
+            }
+
+            int maxPoints = 40;
+            int start = Mathf.Max(0, samples.Count - maxPoints);
+            int visibleCount = samples.Count - start;
+
+            StringBuilder points = new StringBuilder();
+
+            for (int i = 0; i < visibleCount; i++)
+            {
+                float score = samples[start + i].score;
+
+                float x = padding + ((float)i / (visibleCount - 1)) * (width - padding * 2);
+                float y = height - padding - (score / 100f) * (height - padding * 2);
+
+                points.Append($"{x:F1},{y:F1} ");
+            }
+
+            return $@"
+            <svg width='100%' height='{height}' viewBox='0 0 {width} {height}'>
+                <rect width='{width}' height='{height}' fill='#ffffff'/>
+
+                <line x1='{padding}' y1='{height - padding}' x2='{width - padding}' y2='{height - padding}' stroke='#999' stroke-width='2'/>
+                <line x1='{padding}' y1='{padding}' x2='{padding}' y2='{height - padding}' stroke='#999' stroke-width='2'/>
+
+                <line x1='{padding}' y1='{height - padding - 0.25f * (height - padding * 2)}' x2='{width - padding}' y2='{height - padding - 0.25f * (height - padding * 2)}' stroke='#ddd' stroke-width='1'/>
+                <line x1='{padding}' y1='{height - padding - 0.50f * (height - padding * 2)}' x2='{width - padding}' y2='{height - padding - 0.50f * (height - padding * 2)}' stroke='#ddd' stroke-width='1'/>
+                <line x1='{padding}' y1='{height - padding - 0.75f * (height - padding * 2)}' x2='{width - padding}' y2='{height - padding - 0.75f * (height - padding * 2)}' stroke='#ddd' stroke-width='1'/>
+
+                <text x='5' y='{padding + 5}' fill='#555' font-size='14'>100%</text>
+                <text x='10' y='{height / 2}' fill='#555' font-size='14'>50%</text>
+                <text x='18' y='{height - padding + 5}' fill='#555' font-size='14'>0%</text>
+
+                <polyline points='{points}' fill='none' stroke='#1f77b4' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/>
+            </svg>";
         }
     }
 
@@ -106,11 +181,10 @@ public class SessionLogger : MonoBehaviour
                 return "<p>No data recorded yet.</p>";
 
             StringBuilder html = new StringBuilder();
-            html.Append("<table><tr><th>Time</th><th>Signal</th><th>Score</th></tr>");
+            html.Append("<table>");
+            html.Append("<tr><th>Time</th><th>Signal</th><th>Score</th></tr>");
 
-            int start = Mathf.Max(0, samples.Count - 20);
-
-            for (int i = start; i < samples.Count; i++)
+            for (int i = samples.Count - 1; i >= 0; i--)
             {
                 html.Append($"<tr><td>{samples[i].time}</td><td>{samples[i].value:F2}</td><td>{samples[i].score:F0}</td></tr>");
             }
@@ -120,7 +194,7 @@ public class SessionLogger : MonoBehaviour
         }
     }
 
-    public string GetSummaryCsv()
+    public string GetCsv()
     {
         lock (dataLock)
         {
@@ -138,39 +212,24 @@ public class SessionLogger : MonoBehaviour
             }
 
             if (count > 0)
-            {
                 average /= count;
-            }
             else
-            {
                 lowest = 0f;
-            }
 
             TimeSpan duration = DateTime.Now - sessionStartTime;
 
             StringBuilder csv = new StringBuilder();
+
             csv.AppendLine("Patient Data");
-            csv.AppendLine($"Control Now,{current:F0}%");
-            csv.AppendLine($"Current Signal,{latestValue:F2}");
+            csv.AppendLine($"Current Control,{current:F0}%");
             csv.AppendLine($"Performance Score,{current:F0}/100");
-            csv.AppendLine($"Consistency Average,{average:F0}%");
-            csv.AppendLine($"Potential Best,{best:F0}%");
-            csv.AppendLine($"Fatigue Lowest,{lowest:F0}%");
+            csv.AppendLine($"Average Control,{average:F0}%");
+            csv.AppendLine($"Best Control,{best:F0}%");
+            csv.AppendLine($"Lowest Control,{lowest:F0}%");
             csv.AppendLine($"Samples Recorded,{count}");
             csv.AppendLine($"Session Duration,{duration:mm\\:ss}");
+            csv.AppendLine($"Collection Status,{(isCollecting ? "Recording" : "Stopped")}");
             csv.AppendLine();
-
-            return csv.ToString();
-        }
-    }
-
-    public string GetCsv()
-    {
-        lock (dataLock)
-        {
-            StringBuilder csv = new StringBuilder();
-
-            csv.Append(GetSummaryCsv());
 
             csv.AppendLine("Log Data");
             csv.AppendLine("Time,Signal,Score");

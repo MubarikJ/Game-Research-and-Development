@@ -4,45 +4,25 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 
-// =============================================================================
-// SAPCReceiver.cs
-// =============================================================================
-// Receives a continuous control value (0.0 to 1.0) over UDP and maps it
-// to the scale of the GameObject this script is attached to.
-//
-// Attach this script to a sphere in Unity and send UDP values to this port.
-// Sender and receiver ports must match.
-//
-// Part of the SAPC (Stroke Adaptive Playback Control) project
-//   → Real-time biofeedback for stroke rehabilitation.
-// =============================================================================
-
 public class SAPCReceiver : MonoBehaviour
 {
     [Header("Network")]
     public int port = 1000;
 
     [Header("Debug")]
-    [Tooltip("Print received values to console")]
     public bool verboseDebug = true;
-
-    [Tooltip("Log frequency in Hz for received values (set <= 0 to log every packet)")]
     public float debugLogRateHz = 10.0f;
-
-    [Tooltip("Also warn when a packet cannot be parsed")]
     public bool logInvalidPackets = true;
 
     [Header("Packet parsing")]
-    [Tooltip("For float-array packets, choose this index. -1 = auto-select likely control value.")]
     public int floatValueIndex = -1;
-
-    [Tooltip("Auto mode: treat values near 0/1 as edge flags and prefer values inside this margin.")]
     public float autoEdgeEpsilon = 0.01f;
 
-    /// <summary>
-    /// Current normalized SAPC signal value (0.0 to 1.0).
-    /// </summary>
+    [Header("Signal Status")]
+    public float signalTimeoutSeconds = 3f;
+
     public float CurrentValue { get; private set; } = 0.5f;
+    public bool HasSignal { get; private set; } = false;
 
     private Thread receiveThread;
     private UdpClient client;
@@ -55,12 +35,16 @@ public class SAPCReceiver : MonoBehaviour
     private bool hasNewValue = false;
     private bool hasInvalidPacket = false;
     private string latestInvalidPacket = "";
+
     private float nextLogTime = 0f;
     private float sessionLogTimer = 0f;
+    private float lastSignalTime = -999f;
+    private bool receivedSignalThisFrame = false;
 
     void Start()
     {
         isRunning = true;
+
         try
         {
             client = new UdpClient(port);
@@ -87,20 +71,21 @@ public class SAPCReceiver : MonoBehaviour
             {
                 IPEndPoint anyIP = new IPEndPoint(IPAddress.Any, 0);
                 byte[] data = client.Receive(ref anyIP);
+
                 string packetForDebug;
                 float parsed;
                 bool ok = TryParseIncomingPacket(data, out parsed, out packetForDebug);
 
                 if (ok && !float.IsNaN(parsed))
                 {
-                    if (parsed < 0f) parsed = 0f;
-                    if (parsed > 1f) parsed = 1f;
+                    parsed = Mathf.Clamp01(parsed);
 
                     lock (lockObject)
                     {
                         sapcValue = parsed;
                         latestReceivedValue = parsed;
                         hasNewValue = true;
+                        receivedSignalThisFrame = true;
                     }
                 }
                 else
@@ -114,7 +99,7 @@ public class SAPCReceiver : MonoBehaviour
             }
             catch (SocketException)
             {
-                // Receive timeout — normal, keep looping
+                // Receive timeout — normal
             }
             catch (System.ObjectDisposedException)
             {
@@ -123,6 +108,69 @@ public class SAPCReceiver : MonoBehaviour
             catch (System.Exception e)
             {
                 Debug.LogWarning("SAPCReceiver: " + e.Message);
+            }
+        }
+    }
+
+    void Update()
+    {
+        float target;
+        float receivedForLog = 0f;
+        bool shouldLogValue = false;
+        bool shouldLogInvalid = false;
+        string invalidText = "";
+
+        lock (lockObject)
+        {
+            target = sapcValue;
+
+            if (receivedSignalThisFrame)
+            {
+                lastSignalTime = Time.time;
+                receivedSignalThisFrame = false;
+            }
+
+            if (hasNewValue)
+            {
+                receivedForLog = latestReceivedValue;
+                shouldLogValue = true;
+                hasNewValue = false;
+            }
+
+            if (hasInvalidPacket)
+            {
+                invalidText = latestInvalidPacket;
+                shouldLogInvalid = true;
+                hasInvalidPacket = false;
+            }
+        }
+
+        CurrentValue = target;
+        HasSignal = Time.time - lastSignalTime <= signalTimeoutSeconds;
+
+        if (verboseDebug && shouldLogValue)
+        {
+            if (debugLogRateHz <= 0f || Time.unscaledTime >= nextLogTime)
+            {
+                Debug.Log($"EEG: {receivedForLog:F4}");
+                nextLogTime = Time.unscaledTime + (debugLogRateHz > 0f ? 1f / debugLogRateHz : 0f);
+            }
+        }
+
+        if (logInvalidPackets && shouldLogInvalid)
+        {
+            Debug.LogWarning($"SAPCReceiver: could not parse packet '{invalidText}'");
+        }
+
+        sessionLogTimer += Time.deltaTime;
+
+        if (sessionLogTimer >= 1f)
+        {
+            sessionLogTimer = 0f;
+
+            if (SessionLogger.Instance != null)
+            {
+                SessionLogger.Instance.LogValue(target);
             }
         }
     }
@@ -145,6 +193,7 @@ public class SAPCReceiver : MonoBehaviour
         {
             float parsedArrayValue;
             string parsedArrayDebug;
+
             if (TryParseFloatArrayPacket(data, out parsedArrayValue, out parsedArrayDebug))
             {
                 parsed = parsedArrayValue;
@@ -156,12 +205,11 @@ public class SAPCReceiver : MonoBehaviour
         if (data.Length == 4)
         {
             float littleEndianValue = System.BitConverter.ToSingle(data, 0);
-
             byte[] reversed = new byte[] { data[3], data[2], data[1], data[0] };
             float bigEndianValue = System.BitConverter.ToSingle(reversed, 0);
 
-            bool littleFinite = !float.IsNaN(littleEndianValue) && !float.IsInfinity(littleEndianValue);
-            bool bigFinite = !float.IsNaN(bigEndianValue) && !float.IsInfinity(bigEndianValue);
+            bool littleFinite = IsFinite(littleEndianValue);
+            bool bigFinite = IsFinite(bigEndianValue);
 
             if (littleFinite && littleEndianValue >= 0f && littleEndianValue <= 1f)
             {
@@ -206,16 +254,21 @@ public class SAPCReceiver : MonoBehaviour
             return false;
 
         float[] values = new float[count];
+
         for (int i = 0; i < count; i++)
+        {
             values[i] = System.BitConverter.ToSingle(data, i * 4);
+        }
 
         int index = SelectControlValueIndex(values);
+
         if (index < 0)
             return false;
 
         parsed = values[index];
         packetForDebug = "<binary-f32-array-le count=" + count + " idx=" + index + " val="
             + parsed.ToString("F4", System.Globalization.CultureInfo.InvariantCulture) + ">";
+
         return true;
     }
 
@@ -230,7 +283,6 @@ public class SAPCReceiver : MonoBehaviour
                 return floatValueIndex;
         }
 
-        // Auto mode: prefer normalized values that are not near 0/1 (often status flags).
         float edge = Mathf.Clamp01(autoEdgeEpsilon);
         float lower = edge;
         float upper = 1f - edge;
@@ -238,14 +290,15 @@ public class SAPCReceiver : MonoBehaviour
         for (int i = values.Length - 1; i >= 0; i--)
         {
             float value = values[i];
+
             if (IsFinite(value) && value > lower && value < upper)
                 return i;
         }
 
-        // Then allow any normalized value.
         for (int i = values.Length - 1; i >= 0; i--)
         {
             float value = values[i];
+
             if (IsFinite(value) && value >= 0f && value <= 1f)
                 return i;
         }
@@ -284,64 +337,15 @@ public class SAPCReceiver : MonoBehaviour
         );
     }
 
-    void Update()
+    void OnApplicationQuit()
     {
-        float target;
-        float receivedForLog = 0f;
-        bool shouldLogValue = false;
-        bool shouldLogInvalid = false;
-        string invalidText = "";
-
-        lock (lockObject) { target = sapcValue; }
-        
-        CurrentValue = target;
-
-        lock (lockObject)
-        {
-            if (hasNewValue)
-            {
-                receivedForLog = latestReceivedValue;
-                shouldLogValue = true;
-                hasNewValue = false;
-            }
-
-            if (hasInvalidPacket)
-            {
-                invalidText = latestInvalidPacket;
-                shouldLogInvalid = true;
-                hasInvalidPacket = false;
-            }
-        }
-
-        if (verboseDebug && shouldLogValue)
-        {
-            if (debugLogRateHz <= 0f || Time.unscaledTime >= nextLogTime)
-            {
-                Debug.Log($"EEG: {receivedForLog:F4}");
-                nextLogTime = Time.unscaledTime + (debugLogRateHz > 0f ? 1f / debugLogRateHz : 0f);
-            }
-        }
-
-        if (logInvalidPackets && shouldLogInvalid)
-        {
-            Debug.LogWarning($"SAPCReceiver: could not parse packet '{invalidText}'");
-        }
-
-        sessionLogTimer += Time.deltaTime;
-
-        if (sessionLogTimer >= 1f)
-        {
-            sessionLogTimer = 0f;
-
-            if (SessionLogger.Instance != null)
-            {
-                SessionLogger.Instance.LogValue(target);
-            }
-        }
+        Cleanup();
     }
 
-    void OnApplicationQuit() { Cleanup(); }
-    void OnDisable() { Cleanup(); }
+    void OnDisable()
+    {
+        Cleanup();
+    }
 
     private void Cleanup()
     {

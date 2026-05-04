@@ -130,12 +130,51 @@ public class LocalDashboardServer : MonoBehaviour
         return @"
         <html>
         <head>
-            <title>Login</title>
+            <title>Doctor Login</title>
             <style>
-                body { font-family: Arial; background: #111; color: white; display: flex; align-items: center; justify-content: center; height: 100vh; }
-                .box { background: #ddd; color: black; padding: 40px; border-radius: 10px; text-align: center; }
-                input { font-size: 20px; padding: 10px; margin: 10px; }
-                button { font-size: 20px; padding: 10px 30px; }
+                body {
+                    margin: 0;
+                    font-family: Arial, sans-serif;
+                    background: #eef2f5;
+                    height: 100vh;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+
+                .box {
+                    background: white;
+                    padding: 45px;
+                    border-radius: 18px;
+                    box-shadow: 0 12px 35px rgba(0,0,0,0.15);
+                    width: 380px;
+                    text-align: center;
+                }
+
+                h1 {
+                    margin-top: 0;
+                    color: #18324a;
+                }
+
+                input {
+                    width: 100%;
+                    font-size: 20px;
+                    padding: 14px;
+                    margin: 20px 0;
+                    border: 1px solid #ccd6dd;
+                    border-radius: 10px;
+                }
+
+                button {
+                    width: 100%;
+                    font-size: 20px;
+                    padding: 14px;
+                    background: #1f5f8b;
+                    color: white;
+                    border: none;
+                    border-radius: 10px;
+                    cursor: pointer;
+                }
             </style>
         </head>
         <body>
@@ -143,8 +182,7 @@ public class LocalDashboardServer : MonoBehaviour
                 <h1>Doctor Login</h1>
                 <form action='/' method='get'>
                     <input type='password' name='password' placeholder='Password' />
-                    <br/>
-                    <button type='submit'>Enter</button>
+                    <button type='submit'>Enter Dashboard</button>
                 </form>
             </div>
         </body>
@@ -155,6 +193,7 @@ public class LocalDashboardServer : MonoBehaviour
     {
         string stats = SessionLogger.Instance != null ? SessionLogger.Instance.GetStatsHtml() : "No logger found.";
         string log = SessionLogger.Instance != null ? SessionLogger.Instance.GetLogHtml() : "No logger found.";
+        string graph = SessionLogger.Instance != null ? SessionLogger.Instance.GetGraphSvg() : "";
 
         return $@"
         <html>
@@ -164,146 +203,222 @@ public class LocalDashboardServer : MonoBehaviour
             <style>
                 body {{
                     margin: 0;
-                    padding: 20px;
-                    background: black;
-                    font-family: Arial;
+                    background: #eef2f5;
+                    font-family: Arial, sans-serif;
+                    color: #18324a;
                 }}
 
-                .title {{
-                    background: #d9d9d9;
+                .header {{
+                    background: #18324a;
                     color: white;
-                    text-align: center;
-                    font-size: 52px;
-                    padding: 25px;
-                    margin-bottom: 15px;
+                    padding: 24px 32px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
                 }}
 
-                .grid {{
+                .header h1 {{
+                    margin: 0;
+                    font-size: 34px;
+                }}
+
+                .header .status {{
+                    font-size: 18px;
+                    background: #ffffff22;
+                    padding: 10px 16px;
+                    border-radius: 999px;
+                }}
+
+                .container {{
+                    padding: 24px;
                     display: grid;
-                    grid-template-columns: 48% 52%;
-                    gap: 15px;
+                    grid-template-columns: 42% 58%;
+                    gap: 24px;
                 }}
 
                 .panel {{
-                    background: #d9d9d9;
-                    padding: 25px;
-                    margin-bottom: 15px;
+                    background: white;
+                    border-radius: 16px;
+                    padding: 22px;
+                    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+                    margin-bottom: 24px;
                 }}
 
-                h2 {{
-                    color: white;
-                    font-size: 44px;
-                    text-align: center;
-                    margin: 0 0 25px 0;
-                }}
-
-                .scene-buttons {{
-                    display: flex;
-                    justify-content: space-around;
-                }}
-
-                .circle {{
-                    width: 120px;
-                    height: 120px;
-                    border-radius: 50%;
-                    border: 4px solid black;
-                    background: #cfcfcf;
-                    font-size: 24px;
-                    cursor: pointer;
-                }}
-
-                .top-buttons {{
-                    display: flex;
-                    gap: 15px;
-                    justify-content: flex-start;
-                    margin-bottom: 15px;
-                }}
-
-                .rect {{
-                    width: 220px;
-                    height: 70px;
-                    background: #bdbdbd;
-                    color: white;
-                    border: none;
+                .panel h2 {{
+                    margin: 0 0 18px 0;
+                    color: #18324a;
                     font-size: 26px;
+                }}
+
+                .scene-form {{
+                    display: flex;
+                    gap: 12px;
+                    flex-wrap: wrap;
+                }}
+
+                .scene-button {{
+                    width: 130px;
+                    height: 72px;
+                    border: none;
+                    border-radius: 14px;
+                    background: #dbe7ef;
+                    color: #18324a;
+                    font-size: 18px;
+                    font-weight: bold;
                     cursor: pointer;
                 }}
 
-                .data-panel {{
-                    min-height: 520px;
+                .scene-button:hover {{
+                    background: #c6d9e6;
                 }}
 
-                .metric {{
+                .stats-grid {{
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 14px;
+                }}
+
+                .stat-card {{
+                    background: #f5f8fa;
+                    border-left: 6px solid #1f5f8b;
+                    padding: 16px;
+                    border-radius: 12px;
+                }}
+
+                .stat-card span {{
+                    display: block;
+                    font-size: 15px;
+                    color: #607789;
+                    margin-bottom: 8px;
+                }}
+
+                .stat-card strong {{
+                    font-size: 28px;
+                    color: #18324a;
+                }}
+
+                .action-row {{
                     display: flex;
-                    justify-content: space-between;
-                    font-size: 24px;
-                    color: white;
-                    padding: 8px 40px;
+                    gap: 12px;
+                    justify-content: flex-start;
+                    margin-bottom: 24px;
                 }}
 
-                .metric b {{
-                    color: black;
+                .action-button {{
+                    width: 180px;
+                    height: 64px;
+                    border: none;
+                    border-radius: 14px;
+                    font-size: 20px;
+                    font-weight: bold;
+                    color: white;
+                    cursor: pointer;
+                }}
+
+                .stop-button {{
+                    background: #a63d40;
+                }}
+
+                .save-button {{
+                    background: #1f7a4d;
+                }}
+
+                .graph-box {{
+                    background: white;
+                    border-radius: 12px;
+                    overflow: hidden;
+                    border: 1px solid #e4eaee;
                 }}
 
                 .log-panel {{
-                    background: white;
-                    height: 650px;
-                    padding: 25px;
-                    font-size: 18px;
+                    height: 420px;
                     overflow-y: auto;
                 }}
 
                 table {{
                     width: 100%;
                     border-collapse: collapse;
+                    font-size: 16px;
                 }}
 
-                th, td {{
-                    border-bottom: 1px solid #ccc;
-                    padding: 8px;
+                th {{
+                    position: sticky;
+                    top: 0;
+                    background: #18324a;
+                    color: white;
+                    padding: 10px;
                     text-align: left;
+                }}
+
+                td {{
+                    border-bottom: 1px solid #e6ecef;
+                    padding: 10px;
+                }}
+
+                tr:nth-child(even) {{
+                    background: #f7fafb;
+                }}
+
+                .small-note {{
+                    color: #607789;
+                    font-size: 15px;
+                    margin-top: -8px;
+                    margin-bottom: 14px;
                 }}
             </style>
         </head>
 
         <body>
-            <div class='title'>Patient Session Dashboard</div>
+            <div class='header'>
+                <h1>Patient Session Dashboard</h1>
+                <div class='status'>Current scene: {currentSceneIndex}</div>
+            </div>
 
-            <div class='grid'>
+            <div class='container'>
                 <div>
                     <div class='panel'>
                         <h2>Scene Control</h2>
-                        <div class='scene-buttons'>
-                            <form action='/scene' method='get'>
-                                <input type='hidden' name='password' value='test'>
-                                <button class='circle' name='index' value='0'>Main<br>Menu</button>
-                                <button class='circle' name='index' value='1'>Game<br>Scene 1</button>
-                                <button class='circle' name='index' value='2'>Game<br>Scene 2</button>
-                            </form>
-                        </div>
+                        <p class='small-note'>Therapist-controlled navigation for the current session.</p>
+
+                        <form class='scene-form' action='/scene' method='get'>
+                            <input type='hidden' name='password' value='test'>
+                            <button class='scene-button' name='index' value='0'>Main Menu</button>
+                            <button class='scene-button' name='index' value='1'>Game Scene 1</button>
+                            <button class='scene-button' name='index' value='2'>Game Scene 2</button>
+                        </form>
                     </div>
 
-                    <div class='panel data-panel'>
+                    <div class='panel'>
                         <h2>Patient Data</h2>
-                        {stats}
+                        <div class='stats-grid'>
+                            {stats}
+                        </div>
                     </div>
                 </div>
 
                 <div>
-                    <div class='top-buttons'>
+                    <div class='action-row'>
                         <form action='/stop' method='get'>
                             <input type='hidden' name='password' value='test'>
-                            <button class='rect'>Stop</button>
+                            <button class='action-button stop-button'>Stop</button>
                         </form>
 
                         <form action='/save' method='get'>
                             <input type='hidden' name='password' value='test'>
-                            <button class='rect'>Save CSV</button>
+                            <button class='action-button save-button'>Save CSV</button>
                         </form>
                     </div>
 
-                    <div class='log-panel'>
-                        <h2 style='color:black;'>Log</h2>
+                    <div class='panel'>
+                        <h2>Control Performance Graph</h2>
+                        <p class='small-note'>Last 40 recorded samples, shown as percentage control over time.</p>
+                        <div class='graph-box'>
+                            {graph}
+                        </div>
+                    </div>
+
+                    <div class='panel log-panel'>
+                        <h2>Session Log</h2>
                         {log}
                     </div>
                 </div>
