@@ -188,6 +188,10 @@ MonoBehaviour:
   floatValueIndex: -1
   autoEdgeEpsilon: 0.01
   signalTimeoutSeconds: 3
+  enableWizardFallback: 1
+  wizardFullSignalKey: 273
+  wizardSignalValue: 1
+  wizardRestValue: 0
 --- !u!4 &314693571
 Transform:
   m_ObjectHideFlags: 0
@@ -830,10 +834,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1731573757}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -0.000061035, y: -322.32}
-  m_SizeDelta: {x: 1920, y: 435.35}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 0.4}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!65 &1093580311
 BoxCollider:
@@ -1023,10 +1027,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1731573757}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -0.000061035, y: 787.32}
-  m_SizeDelta: {x: 1920, y: 494.64}
+  m_AnchorMin: {x: 0, y: 0.4}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1731573753
 GameObject:
@@ -1040,6 +1044,7 @@ GameObject:
   - component: {fileID: 1731573756}
   - component: {fileID: 1731573755}
   - component: {fileID: 1731573754}
+  - component: {fileID: 1731573758}
   m_Layer: 5
   m_Name: Canvas
   m_TagString: Untagged
@@ -1097,7 +1102,7 @@ Canvas:
   m_Enabled: 1
   serializedVersion: 3
   m_RenderMode: 0
-  m_Camera: {fileID: 0}
+  m_Camera: {fileID: 1297680268}
   m_PlaneDistance: 100
   m_PixelPerfect: 0
   m_ReceivesEvents: 1
@@ -1133,6 +1138,22 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
+--- !u!114 &1731573758
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1731573753}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 688779701ae5bda4c8f8fdedb4bdc077, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CanvasFiller
+  background: {fileID: 1823189781}
+  spawnArea: {fileID: 1386169328}
+  popZone: {fileID: 1093580310}
+  popZoneHeightPercent: 0.4
 --- !u!1 &1823189780
 GameObject:
   m_ObjectHideFlags: 0
@@ -1165,10 +1186,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1731573757}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0.000061035, y: 0}
-  m_SizeDelta: {x: 1920, y: 1080}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1823189782
 MonoBehaviour:
