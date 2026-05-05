@@ -2,17 +2,29 @@ using UnityEngine;
 
 public class DontDestroyDashboard : MonoBehaviour
 {
-    private static DontDestroyDashboard instance;
+    [Header("Unique ID for this persistent object")]
+    public string uniqueID = "DashboardManager";
+
+    private static readonly System.Collections.Generic.HashSet<string> existingIDs
+        = new System.Collections.Generic.HashSet<string>();
 
     void Awake()
     {
-        if (instance != null)
+        if (existingIDs.Contains(uniqueID))
         {
             Destroy(gameObject);
             return;
         }
 
-        instance = this;
+        existingIDs.Add(uniqueID);
         DontDestroyOnLoad(gameObject);
+    }
+
+    void OnDestroy()
+    {
+        if (!Application.isPlaying)
+        {
+            existingIDs.Remove(uniqueID);
+        }
     }
 }

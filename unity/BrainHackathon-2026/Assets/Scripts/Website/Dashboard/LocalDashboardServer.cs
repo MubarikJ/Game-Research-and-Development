@@ -23,7 +23,7 @@ public class LocalDashboardServer : MonoBehaviour
     private readonly object appLock = new object();
     private bool quitRequested = false;
 
-    private const string PASSWORD = "test";
+    private const string PASSWORD = "TheDoctorIsIn";
 
     void Start()
     {
@@ -138,9 +138,34 @@ public class LocalDashboardServer : MonoBehaviour
             {
                 var context = listener.GetContext();
                 string path = context.Request.Url.AbsolutePath;
-                string password = context.Request.QueryString["password"];
 
-                if (string.IsNullOrEmpty(password) || password != PASSWORD)
+                if (path == "/login")
+                {
+                    string password = context.Request.QueryString["password"];
+
+                    if (password == PASSWORD)
+                    {
+                        context.Response.SetCookie(new Cookie("dashboard_auth", "true"));
+                        RedirectHome(context.Response);
+                    }
+                    else
+                    {
+                        SendHtml(context.Response, BuildLoginHtml());
+                    }
+
+                    continue;
+                }
+
+                bool isLoggedIn = false;
+
+                Cookie authCookie = context.Request.Cookies["dashboard_auth"];
+
+                if (authCookie != null && authCookie.Value == "true")
+                {
+                    isLoggedIn = true;
+                }
+
+                if (!isLoggedIn)
                 {
                     SendHtml(context.Response, BuildLoginHtml());
                     continue;
@@ -276,7 +301,7 @@ public class LocalDashboardServer : MonoBehaviour
         <body>
             <div class='box'>
                 <h1>Doctor Login</h1>
-                <form action='/' method='get'>
+                <form action='/login' method='get'>
                     <input type='password' name='password' placeholder='Password' />
                     <button type='submit'>Enter Dashboard</button>
                 </form>
@@ -299,7 +324,6 @@ public class LocalDashboardServer : MonoBehaviour
         string quitButtonHtml = recordingStopped
             ? @"
                 <form action='/quit' method='get'>
-                    <input type='hidden' name='password' value='test'>
                     <button class='action-button quit-button'>Quit App</button>
                 </form>"
             : "";
@@ -308,7 +332,7 @@ public class LocalDashboardServer : MonoBehaviour
         <html>
         <head>
             <title>Stroke Rehab Dashboard</title>
-            <meta http-equiv='refresh' content='2; url=/?password=test'>
+            <meta http-equiv='refresh' content='2; url=/'>
             <style>
                 body {{
                     margin: 0;
@@ -509,7 +533,6 @@ public class LocalDashboardServer : MonoBehaviour
                         <p class='small-note'>Therapist-controlled navigation for the current session.</p>
 
                         <form class='scene-form' action='/scene' method='get'>
-                            <input type='hidden' name='password' value='test'>
                             <button class='scene-button' name='index' value='0'>Main Menu</button>
                             <button class='scene-button' name='index' value='1'>Start Room</button>
                             <button class='scene-button' name='index' value='2'>Cleaning Room</button>
@@ -527,7 +550,6 @@ public class LocalDashboardServer : MonoBehaviour
                         </div>
 
                         <form class='scene-form' action='/music' method='get'>
-                            <input type='hidden' name='password' value='test'>
                             <button class='scene-button' name='action' value='on'>Music On</button>
                             <button class='scene-button' name='action' value='off'>Music Off</button>
                             <button class='scene-button' name='action' value='down'>Volume -</button>
@@ -546,12 +568,10 @@ public class LocalDashboardServer : MonoBehaviour
                 <div>
                     <div class='action-row'>
                         <form action='/stop' method='get'>
-                            <input type='hidden' name='password' value='test'>
                             <button class='action-button stop-button'>Stop</button>
                         </form>
 
                         <form action='/save' method='get'>
-                            <input type='hidden' name='password' value='test'>
                             <button class='action-button save-button'>Save CSV</button>
                         </form>
 
@@ -589,7 +609,7 @@ public class LocalDashboardServer : MonoBehaviour
 
     void RedirectHome(HttpListenerResponse response)
     {
-        response.Redirect("/?password=test");
+        response.Redirect("/");
         response.Close();
     }
 

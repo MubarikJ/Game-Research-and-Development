@@ -178,6 +178,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cd130363d7ed18841ae3f4b114afa748, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DontDestroyDashboard
+  uniqueID: DashboardManager
 --- !u!4 &51540020
 Transform:
   m_ObjectHideFlags: 0
@@ -515,6 +516,10 @@ MonoBehaviour:
   floatValueIndex: -1
   autoEdgeEpsilon: 0.01
   signalTimeoutSeconds: 3
+  enableWizardFallback: 1
+  wizardFullSignalKey: 273
+  wizardSignalValue: 1
+  wizardRestValue: 0
 --- !u!1 &535323304
 GameObject:
   m_ObjectHideFlags: 0
@@ -958,6 +963,7 @@ GameObject:
   - component: {fileID: 1124802602}
   - component: {fileID: 1124802601}
   - component: {fileID: 1124802603}
+  - component: {fileID: 1124802604}
   m_Layer: 0
   m_Name: AmbientNoise
   m_TagString: Untagged
@@ -1094,6 +1100,19 @@ MonoBehaviour:
   volume: 0.5
   musicEnabled: 1
   mutedSceneIndex: 1
+--- !u!114 &1124802604
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1124802599}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cd130363d7ed18841ae3f4b114afa748, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DontDestroyDashboard
+  uniqueID: AmbientNoise
 --- !u!1 &1178952681
 GameObject:
   m_ObjectHideFlags: 0

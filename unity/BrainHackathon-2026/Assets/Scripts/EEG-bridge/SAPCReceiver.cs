@@ -21,6 +21,12 @@ public class SAPCReceiver : MonoBehaviour
     [Header("Signal Status")]
     public float signalTimeoutSeconds = 3f;
 
+    [Header("Wizard of Oz Fallback")]
+    public bool enableWizardFallback = true;
+    public KeyCode wizardFullSignalKey = KeyCode.UpArrow;
+    public float wizardSignalValue = 1f;
+    public float wizardRestValue = 0f;
+
     public float CurrentValue { get; private set; } = 0.5f;
     public bool HasSignal { get; private set; } = false;
 
@@ -145,8 +151,19 @@ public class SAPCReceiver : MonoBehaviour
             }
         }
 
-        CurrentValue = target;
         HasSignal = Time.time - lastSignalTime <= signalTimeoutSeconds;
+
+        // Wizard of Oz fallback:
+        // Only active when the real Unicorn signal is NOT detected.
+        if (enableWizardFallback && !HasSignal)
+        {
+            if (Input.GetKey(wizardFullSignalKey))
+                target = wizardSignalValue;
+            else
+                target = wizardRestValue;
+        }
+
+        CurrentValue = Mathf.Clamp01(target);
 
         if (verboseDebug && shouldLogValue)
         {
@@ -170,7 +187,7 @@ public class SAPCReceiver : MonoBehaviour
 
             if (SessionLogger.Instance != null)
             {
-                SessionLogger.Instance.LogValue(target);
+                SessionLogger.Instance.LogValue(CurrentValue);
             }
         }
     }
