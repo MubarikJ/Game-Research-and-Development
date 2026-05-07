@@ -157,13 +157,10 @@ public class LocalDashboardServer : MonoBehaviour
                 }
 
                 bool isLoggedIn = false;
-
                 Cookie authCookie = context.Request.Cookies["dashboard_auth"];
 
                 if (authCookie != null && authCookie.Value == "true")
-                {
                     isLoggedIn = true;
-                }
 
                 if (!isLoggedIn)
                 {
@@ -205,9 +202,7 @@ public class LocalDashboardServer : MonoBehaviour
                 if (path == "/stop")
                 {
                     if (SessionLogger.Instance != null)
-                    {
                         SessionLogger.Instance.StopCollection();
-                    }
 
                     RedirectHome(context.Response);
                     continue;
@@ -234,6 +229,12 @@ public class LocalDashboardServer : MonoBehaviour
                     }
 
                     SendHtml(context.Response, "<html><body><h1>Application closing...</h1></body></html>");
+                    continue;
+                }
+
+                if (path == "/data")
+                {
+                    SendHtml(context.Response, BuildLiveDataHtml());
                     continue;
                 }
 
@@ -310,29 +311,48 @@ public class LocalDashboardServer : MonoBehaviour
         </html>";
     }
 
+    string BuildLiveDataHtml()
+    {
+        string stats = SessionLogger.Instance != null ? SessionLogger.Instance.GetStatsHtml() : "No logger found.";
+        string log = SessionLogger.Instance != null ? SessionLogger.Instance.GetLogHtml() : "No logger found.";
+        string graph = SessionLogger.Instance != null ? SessionLogger.Instance.GetGraphSvg() : "";
+        string quitButton = BuildQuitButtonHtml();
+
+        return $@"
+            <div id='scene-status'>{currentSceneIndex}</div>
+            <div id='music-status'>{cachedMusicStatus}</div>
+            <div id='music-volume'>{cachedMusicVolume}%</div>
+            <div id='stats-content'>{stats}</div>
+            <div id='graph-content'>{graph}</div>
+            <div id='log-content'>{log}</div>
+            <div id='quit-content'>{quitButton}</div>
+        ";
+    }
+
+    string BuildQuitButtonHtml()
+    {
+        bool recordingStopped = SessionLogger.Instance != null && !SessionLogger.Instance.isCollecting;
+
+        if (!recordingStopped)
+            return "";
+
+        return @"
+            <form action='/quit' method='get'>
+                <button class='action-button quit-button'>Quit App</button>
+            </form>";
+    }
+
     string BuildDashboardHtml()
     {
         string stats = SessionLogger.Instance != null ? SessionLogger.Instance.GetStatsHtml() : "No logger found.";
         string log = SessionLogger.Instance != null ? SessionLogger.Instance.GetLogHtml() : "No logger found.";
         string graph = SessionLogger.Instance != null ? SessionLogger.Instance.GetGraphSvg() : "";
-
-        string musicStatus = cachedMusicStatus;
-        string musicVolume = cachedMusicVolume;
-
-        bool recordingStopped = SessionLogger.Instance != null && !SessionLogger.Instance.isCollecting;
-
-        string quitButtonHtml = recordingStopped
-            ? @"
-                <form action='/quit' method='get'>
-                    <button class='action-button quit-button'>Quit App</button>
-                </form>"
-            : "";
+        string quitButtonHtml = BuildQuitButtonHtml();
 
         return $@"
         <html>
         <head>
             <title>Stroke Rehab Dashboard</title>
-            <meta http-equiv='refresh' content='2; url=/'>
             <style>
                 body {{
                     margin: 0;
@@ -464,6 +484,10 @@ public class LocalDashboardServer : MonoBehaviour
                     background: #1f7a4d;
                 }}
 
+                .quit-button {{
+                    background: #333333;
+                }}
+
                 .graph-box {{
                     background: white;
                     border-radius: 12px;
@@ -513,17 +537,13 @@ public class LocalDashboardServer : MonoBehaviour
                     margin-top: -8px;
                     margin-bottom: 14px;
                 }}
-
-                .quit-button {{
-                    background: #333333;
-                }}
             </style>
         </head>
 
         <body>
             <div class='header'>
                 <h1>Patient Session Dashboard</h1>
-                <div class='status'>Current scene: {currentSceneIndex}</div>
+                <div class='status'>Current scene: <span id='scene-status-value'>{currentSceneIndex}</span></div>
             </div>
 
             <div class='container'>
@@ -545,8 +565,8 @@ public class LocalDashboardServer : MonoBehaviour
                         <p class='small-note'>Ambient music control for the patient screen.</p>
 
                         <div class='music-info'>
-                            <div><b>Status:</b> {musicStatus}</div>
-                            <div><b>Volume:</b> {musicVolume}%</div>
+                            <div><b>Status:</b> <span id='music-status-value'>{cachedMusicStatus}</span></div>
+                            <div><b>Volume:</b> <span id='music-volume-value'>{cachedMusicVolume}%</span></div>
                         </div>
 
                         <form class='scene-form' action='/music' method='get'>
@@ -559,7 +579,7 @@ public class LocalDashboardServer : MonoBehaviour
 
                     <div class='panel'>
                         <h2>Patient Data</h2>
-                        <div class='stats-grid'>
+                        <div class='stats-grid' id='stats-grid'>
                             {stats}
                         </div>
                     </div>
@@ -575,25 +595,64 @@ public class LocalDashboardServer : MonoBehaviour
                             <button class='action-button save-button'>Save CSV</button>
                         </form>
 
-                        {quitButtonHtml}
+                        <div id='quit-button-holder'>
+                            {quitButtonHtml}
+                        </div>
                     </div>
 
                     <div class='panel'>
                         <h2>Control Performance Graph</h2>
                         <p class='small-note'>Last 40 recorded samples, shown as percentage control over time.</p>
-                        <div class='graph-box'>
+                        <div class='graph-box' id='graph-box'>
                             {graph}
                         </div>
                     </div>
 
                     <div class='panel log-panel'>
                         <h2>Session Log</h2>
-                        <div class='log-scroll'>
+                        <div class='log-scroll' id='log-scroll'>
                             {log}
                         </div>
                     </div>
                 </div>
             </div>
+
+            <script>
+                async function updateDashboard() {{
+                    try {{
+                        const response = await fetch('/data');
+                        const html = await response.text();
+
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+
+                        document.getElementById('scene-status-value').innerHTML =
+                            doc.querySelector('#scene-status').innerHTML;
+
+                        document.getElementById('music-status-value').innerHTML =
+                            doc.querySelector('#music-status').innerHTML;
+
+                        document.getElementById('music-volume-value').innerHTML =
+                            doc.querySelector('#music-volume').innerHTML;
+
+                        document.getElementById('stats-grid').innerHTML =
+                            doc.querySelector('#stats-content').innerHTML;
+
+                        document.getElementById('graph-box').innerHTML =
+                            doc.querySelector('#graph-content').innerHTML;
+
+                        document.getElementById('log-scroll').innerHTML =
+                            doc.querySelector('#log-content').innerHTML;
+
+                        document.getElementById('quit-button-holder').innerHTML =
+                            doc.querySelector('#quit-content').innerHTML;
+                    }} catch (e) {{
+                        console.log('Dashboard update failed', e);
+                    }}
+                }}
+
+                setInterval(updateDashboard, 2000);
+            </script>
         </body>
         </html>";
     }
