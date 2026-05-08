@@ -1411,11 +1411,6 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 4300002, guid: b4065be34e2086e4799781f9c5abd5d7, type: 3}
---- !u!1 &335177050 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 5188719395589297662, guid: be94314c2b19dbe4ebd74d0edac524e3, type: 3}
-  m_PrefabInstance: {fileID: 1139260471}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &335369760 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1565430265841340090, guid: 436933265c6430c4c9e7ea3760adef03, type: 3}
@@ -2767,11 +2762,6 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 4300014, guid: 0597b96febae5824e874776f2c5b5c0f, type: 3}
---- !u!1 &659927348 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 456115914855725087, guid: 809563dc332f70e49b13dbbb71afec61, type: 3}
-  m_PrefabInstance: {fileID: 1187413407}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &695350407 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 100004, guid: b4065be34e2086e4799781f9c5abd5d7, type: 3}
@@ -4322,54 +4312,13 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 5188719395589297662, guid: be94314c2b19dbe4ebd74d0edac524e3, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1139260474}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: be94314c2b19dbe4ebd74d0edac524e3, type: 3}
 --- !u!4 &1139260472 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4848644380803190596, guid: be94314c2b19dbe4ebd74d0edac524e3, type: 3}
   m_PrefabInstance: {fileID: 1139260471}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &1139260474
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 335177050}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 90bcb64c93d752c4281ff0004381e009, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GazeBeautyBreakable
-  minLookTime: 2
-  maxLookTime: 3
-  effectMode: 3
-  fireworksPrefabs:
-  - {fileID: 6414953239637031926, guid: 8c49b35febea4514b87b37f643064ed4, type: 3}
-  butterflyPrefabs: []
-  extraEffectPrefabs: []
-  destroyBurst: {fileID: 0}
-  instantBurstCount: 3
-  overTimeSpawnCount: 10
-  spawnDuration: 2.5
-  spawnRadius: 1.2
-  upwardOffset: 0.5
-  randomHeight: 1.5
-  randomRotation: 1
-  randomScale: 1
-  minScale: 0.7
-  maxScale: 1.4
-  hideOriginalObject: 1
-  destroyOriginalAfterEffects: 1
-  spawnedEffectLifetime: 8
-  targetRenderer: {fileID: 0}
-  normalColor: {r: 1, g: 1, b: 1, a: 1}
-  lookedAtColor: {r: 0, g: 1, b: 1, a: 1}
-  fireworksPrefab: {fileID: 0}
-  butterflyPrefab: {fileID: 0}
 --- !u!1 &1181323110
 GameObject:
   m_ObjectHideFlags: 0
@@ -4548,29 +4497,13 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 456115914855725087, guid: 809563dc332f70e49b13dbbb71afec61, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1187413410}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 809563dc332f70e49b13dbbb71afec61, type: 3}
 --- !u!4 &1187413408 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 945654416970670757, guid: 809563dc332f70e49b13dbbb71afec61, type: 3}
   m_PrefabInstance: {fileID: 1187413407}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &1187413410
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 659927348}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 30fdaf08e227426469c208664286ca2e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GazeRayCast
-  maxDistance: 100
 --- !u!1001 &1218180028
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -5778,10 +5711,7 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 5052278468339351742, guid: 3acea8b8ad745384fa9a7feabe641426, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1482591386}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 3acea8b8ad745384fa9a7feabe641426, type: 3}
 --- !u!4 &1401711003 stripped
 Transform:
@@ -6086,35 +6016,6 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 0}
---- !u!1 &1482591382 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 5052278468339351742, guid: 3acea8b8ad745384fa9a7feabe641426, type: 3}
-  m_PrefabInstance: {fileID: 1401711002}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &1482591386
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1482591382}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 35e97cfde20bf9740af8c79b6e1b95eb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GazeBreakable
-  brokenPrefab: {fileID: 3928998189374746443, guid: 00bba72dbda252a4eac12e218848cb44, type: 3}
-  minLookTime: 2
-  maxLookTime: 3
-  explosionForce: 350
-  explosionRadius: 3
-  upwardModifier: 0.4
-  destroyOriginal: 1
-  destroyPiecesAfter: 8
-  destroyBurst: {fileID: 0}
-  targetRenderer: {fileID: 0}
-  normalColor: {r: 1, g: 1, b: 1, a: 1}
-  lookedAtColor: {r: 0, g: 1, b: 1, a: 1}
 --- !u!1 &1503389010
 GameObject:
   m_ObjectHideFlags: 0
