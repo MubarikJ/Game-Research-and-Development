@@ -53,6 +53,11 @@ public class BalloonLookGame : MonoBehaviour
         bool eegActive = sapcReceiver != null && sapcReceiver.CurrentValue >= eegThreshold;
         bool focused = looking && eegActive;
 
+        if (SessionLogger.Instance != null)
+        {
+            SessionLogger.Instance.LogEyeEegSync(looking, focused);
+        }
+
         Vector2 pos = balloon.anchoredPosition;
 
         if (focused)
@@ -176,6 +181,11 @@ public class BalloonLookGame : MonoBehaviour
         swayTimer = Random.Range(0f, 10f);
         wasFocused = false;
         PickRandomSideDirection();
+
+        if (SessionLogger.Instance != null)
+        {
+            SessionLogger.Instance.LogEyeEegSync(false, false);
+        }
     }
 
     void PlaySound(AudioClip clip)

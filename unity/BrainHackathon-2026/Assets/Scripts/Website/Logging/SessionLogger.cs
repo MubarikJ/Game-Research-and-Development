@@ -9,6 +9,9 @@ public class SessionSample
     public string time;
     public float value;
     public float score;
+
+    public bool lookingAtTarget;
+    public bool combinedActivation;
 }
 
 public class SessionLogger : MonoBehaviour
@@ -23,6 +26,9 @@ public class SessionLogger : MonoBehaviour
 
     private DateTime sessionStartTime;
     private float latestValue = 0f;
+
+    private bool latestLookingAtTarget = false;
+    private bool latestCombinedActivation = false;
 
     void Awake()
     {
@@ -54,8 +60,19 @@ public class SessionLogger : MonoBehaviour
             {
                 time = DateTime.Now.ToString("HH:mm:ss"),
                 value = value,
-                score = score
+                score = score,
+                lookingAtTarget = latestLookingAtTarget,
+                combinedActivation = latestCombinedActivation
             });
+        }
+    }
+
+    public void LogEyeEegSync(bool lookingAtTarget, bool combinedActivation)
+    {
+        lock (dataLock)
+        {
+            latestLookingAtTarget = lookingAtTarget;
+            latestCombinedActivation = combinedActivation;
         }
     }
 
@@ -75,17 +92,33 @@ public class SessionLogger : MonoBehaviour
             float best = 0f;
             float lowest = 100f;
 
+            int lookingCount = 0;
+            int combinedCount = 0;
+
             foreach (var sample in samples)
             {
                 average += sample.score;
+
                 if (sample.score > best) best = sample.score;
                 if (sample.score < lowest) lowest = sample.score;
+
+                if (sample.lookingAtTarget) lookingCount++;
+                if (sample.combinedActivation) combinedCount++;
             }
 
+            float lookingPercent = 0f;
+            float syncPercent = 0f;
+
             if (count > 0)
+            {
                 average /= count;
+                lookingPercent = (lookingCount / (float)count) * 100f;
+                syncPercent = (combinedCount / (float)count) * 100f;
+            }
             else
+            {
                 lowest = 0f;
+            }
 
             TimeSpan duration = DateTime.Now - sessionStartTime;
 
@@ -109,6 +142,14 @@ public class SessionLogger : MonoBehaviour
                 <div class='stat-card'>
                     <span>Lowest Control</span>
                     <strong>{lowest:F0}%</strong>
+                </div>
+                <div class='stat-card'>
+                    <span>Eye Focus</span>
+                    <strong>{lookingPercent:F0}%</strong>
+                </div>
+                <div class='stat-card'>
+                    <span>Eye + EEG Sync</span>
+                    <strong>{syncPercent:F0}%</strong>
                 </div>
                 <div class='stat-card'>
                     <span>Samples</span>
@@ -201,11 +242,19 @@ public class SessionLogger : MonoBehaviour
 
             StringBuilder html = new StringBuilder();
             html.Append("<table>");
-            html.Append("<tr><th>Time</th><th>Signal</th><th>Score</th></tr>");
+            html.Append("<tr><th>Time</th><th>Signal</th><th>Score</th><th>Looking</th><th>Sync</th></tr>");
 
             for (int i = samples.Count - 1; i >= 0; i--)
             {
-                html.Append($"<tr><td>{samples[i].time}</td><td>{samples[i].value:F2}</td><td>{samples[i].score:F0}</td></tr>");
+                html.Append(
+                    $"<tr>" +
+                    $"<td>{samples[i].time}</td>" +
+                    $"<td>{samples[i].value:F2}</td>" +
+                    $"<td>{samples[i].score:F0}</td>" +
+                    $"<td>{(samples[i].lookingAtTarget ? "Yes" : "No")}</td>" +
+                    $"<td>{(samples[i].combinedActivation ? "Yes" : "No")}</td>" +
+                    $"</tr>"
+                );
             }
 
             html.Append("</table>");
@@ -223,17 +272,33 @@ public class SessionLogger : MonoBehaviour
             float best = 0f;
             float lowest = 100f;
 
+            int lookingCount = 0;
+            int combinedCount = 0;
+
             foreach (var sample in samples)
             {
                 average += sample.score;
+
                 if (sample.score > best) best = sample.score;
                 if (sample.score < lowest) lowest = sample.score;
+
+                if (sample.lookingAtTarget) lookingCount++;
+                if (sample.combinedActivation) combinedCount++;
             }
 
+            float lookingPercent = 0f;
+            float syncPercent = 0f;
+
             if (count > 0)
+            {
                 average /= count;
+                lookingPercent = (lookingCount / (float)count) * 100f;
+                syncPercent = (combinedCount / (float)count) * 100f;
+            }
             else
+            {
                 lowest = 0f;
+            }
 
             TimeSpan duration = DateTime.Now - sessionStartTime;
 
@@ -245,17 +310,25 @@ public class SessionLogger : MonoBehaviour
             csv.AppendLine($"Average Control,{average:F0}%");
             csv.AppendLine($"Best Control,{best:F0}%");
             csv.AppendLine($"Lowest Control,{lowest:F0}%");
+            csv.AppendLine($"Eye Focus,{lookingPercent:F0}%");
+            csv.AppendLine($"Eye EEG Synchronization,{syncPercent:F0}%");
             csv.AppendLine($"Samples Recorded,{count}");
             csv.AppendLine($"Session Duration,{duration:mm\\:ss}");
             csv.AppendLine($"Collection Status,{(isCollecting ? "Recording" : "Stopped")}");
             csv.AppendLine();
 
             csv.AppendLine("Log Data");
-            csv.AppendLine("Time,Signal,Score");
+            csv.AppendLine("Time,Signal,Score,LookingAtTarget,CombinedActivation");
 
             foreach (var sample in samples)
             {
-                csv.AppendLine($"{sample.time},{sample.value:F4},{sample.score:F2}");
+                csv.AppendLine(
+                    $"{sample.time}," +
+                    $"{sample.value.ToString("F4", System.Globalization.CultureInfo.InvariantCulture)}," +
+                    $"{sample.score.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}," +
+                    $"{sample.lookingAtTarget}," +
+                    $"{sample.combinedActivation}"
+                );
             }
 
             return csv.ToString();
